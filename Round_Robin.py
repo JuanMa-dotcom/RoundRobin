@@ -1,63 +1,20 @@
-"""
-Round Robin - Planificación de procesos (datos aleatorios)
-----------------------------------------------------------
-Simula el algoritmo de planificación Round Robin:
-cada proceso usa la CPU como máximo un "quantum" de tiempo.
-Si no termina en ese tiempo, regresa al final de la cola de listos
-y espera su siguiente turno.
-
-En esta versión TODO se genera al azar:
-  - El número de procesos.
-  - El tiempo de llegada y la ráfaga de cada proceso.
-  - El quantum de cada turno.
-
-Al final muestra:
-  - El diagrama de Gantt (qué proceso usó la CPU, en qué intervalo
-    y qué quantum le tocó en ese turno).
-  - Tiempo de finalización, retorno y espera de cada proceso.
-  - Los promedios de retorno y espera.
-"""
-
-import random                  # Generación de valores aleatorios
+# -*- coding: utf-8 -*-
+import random  # Importamos random para generar el quantum aleatorio
 from collections import deque  # Cola eficiente para la cola de listos
 
-# ----- Rangos de los valores aleatorios (se pueden cambiar aquí) -----
-MIN_PROCESOS, MAX_PROCESOS = 3, 6
-MIN_LLEGADA, MAX_LLEGADA = 0, 10
-MIN_RAFAGA, MAX_RAFAGA = 1, 10
-MIN_QUANTUM, MAX_QUANTUM = 1, 5
 
-
-def generar_procesos():
+def round_robin(procesos, quantum):
     """
-    Crea una lista de procesos con datos aleatorios.
-
-    Regresa:
-        procesos (list): lista de tuplas (nombre, llegada, rafaga).
-    """
-    n = random.randint(MIN_PROCESOS, MAX_PROCESOS)
-    procesos = []
-    for k in range(n):
-        llegada = random.randint(MIN_LLEGADA, MAX_LLEGADA)
-        rafaga = random.randint(MIN_RAFAGA, MAX_RAFAGA)
-        procesos.append((f"P{k+1}", llegada, rafaga))
-    return procesos
-
-
-def round_robin(procesos, q_min, q_max):
-    """
-    Ejecuta la simulación de Round Robin con quantum aleatorio por turno.
+    Ejecuta la simulación de Round Robin.
 
     Parámetros:
         procesos (list): lista de tuplas (nombre, llegada, rafaga).
-        q_min (int): quantum mínimo posible.
-        q_max (int): quantum máximo posible.
+        quantum (int): tiempo máximo que un proceso puede usar la CPU por turno.
 
     Regresa:
         ps (list): lista de procesos (diccionarios) con su tiempo de fin calculado.
-        gantt (list): lista de tuplas (nombre, inicio, fin, quantum) con cada uso
-                      de la CPU. El nombre "-" indica que la CPU estuvo ociosa
-                      (en ese caso el quantum es None).
+        gantt (list): lista de tuplas (nombre, inicio, fin) con cada uso de la CPU.
+                      El nombre "-" indica que la CPU estuvo ociosa.
     """
     # Convertimos cada proceso en un diccionario y los ordenamos por llegada.
     # "resta" guarda cuánto tiempo de ráfaga le falta a cada proceso.
@@ -87,7 +44,7 @@ def round_robin(procesos, q_min, q_max):
         # Si no hay procesos listos, la CPU queda ociosa
         # hasta que llegue el siguiente proceso.
         if not cola:
-            gantt.append(("-", t, ps[i]["llegada"], None))
+            gantt.append(("-", t, ps[i]["llegada"]))
             t = ps[i]["llegada"]
             admitir()
             continue
@@ -95,12 +52,9 @@ def round_robin(procesos, q_min, q_max):
         # Se toma el primer proceso de la cola
         p = cola.popleft()
 
-        # Quantum aleatorio para este turno
-        quantum = random.randint(q_min, q_max)
-
         # Se ejecuta el quantum completo o solo lo que le falte si es menos
         corre = min(quantum, p["resta"])
-        gantt.append((p["nombre"], t, t + corre, quantum))
+        gantt.append((p["nombre"], t, t + corre))
         t += corre
         p["resta"] -= corre
 
@@ -120,24 +74,27 @@ def round_robin(procesos, q_min, q_max):
 
 
 def main():
-    """Genera los datos al azar, ejecuta la simulación y muestra los resultados."""
+    """Pide los datos al usuario, ejecuta la simulación y muestra los resultados."""
 
-    # ----- Generación de datos -----
-    procesos = generar_procesos()
-    n = len(procesos)
-    print(f"Número de procesos: {n}")
-    print(f"Quantum aleatorio por turno entre {MIN_QUANTUM} y {MAX_QUANTUM}")
+    # ----- Captura de datos -----
+    n = int(input("Número de procesos: "))
+    procesos = []
+    for k in range(n):
+        llegada = int(input(f"P{k+1} - tiempo de llegada: "))
+        rafaga = int(input(f"P{k+1} - ráfaga de CPU: "))
+        procesos.append((f"P{k+1}", llegada, rafaga))
+
+    # ----- Generación Aleatoria del Quantum -----
+    # Genera un número entero aleatorio entre 1 y 5 (puedes cambiar estos valores)
+    quantum = random.randint(1, 5)
+    print(f"\n[!] Quantum generado aleatoriamente para esta simulación: {quantum}")
 
     # ----- Simulación -----
-    ps, gantt = round_robin(procesos, MIN_QUANTUM, MAX_QUANTUM)
+    ps, gantt = round_robin(procesos, quantum)
 
     # ----- Diagrama de Gantt -----
-    # "q" es el quantum que le tocó al proceso en ese turno.
     print("\nDiagrama de Gantt:")
-    print(" | ".join(
-        f"{nom} [{a}-{b}]" if q is None else f"{nom} [{a}-{b}] q={q}"
-        for nom, a, b, q in gantt
-    ))
+    print(" | ".join(f"{nom} [{a}-{b}]" for nom, a, b in gantt))
 
     # ----- Tabla de resultados -----
     # Retorno = fin - llegada   (tiempo total en el sistema)
